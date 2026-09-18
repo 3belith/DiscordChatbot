@@ -507,29 +507,64 @@ SUMMARY_SYSTEM = """
 # ============================================================
 
 async def generate(prompt: str, system_instruction: str):
-    client, used_key = await get_next_client()
+    """Gemini 호출. 403 키는 영구 제외하고 다음 키로 재시도."""
 
-    try:
-        response = await client.aio.models.generate_content(
-            model=MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                max_output_tokens=MAX_OUTPUT_TOKENS,
-                temperature=0.7,
-            ),
-        )
+    max_attempts = len(clients)
 
-    except Exception as exc:
-        print(f"Gemini 오류 (key #{used_key + 1}): {exc}")
-        raise
+    for _ in range(max_attempts):
+        try:
+            client, used_key = await get_next_client()
 
-    text = (response.text or "").strip()
+        except RuntimeError as exc:
+            print(f"Gemini 사용 가능한 키 없음: {exc}")
+            raise
 
-    if not text:
-        raise RuntimeError("Gemini가 빈 응답을 반환했습니다.")
+        try:
+            response = await client.aio.models.generate_content(
+                model=MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    max_output_tokens=MAX_OUTPUT_TOKENS,
+                    temperature=0.7,
+                ),
+            )
 
-    return text
+            text = (response.text or "").strip()
+
+            if not text:
+                raise RuntimeError(
+                    "Gemini가 빈 응답을 반환했습니다."
+                )
+
+            return text
+
+        except Exception as exc:
+            error_text = str(exc)
+
+            print(
+                f"Gemini 오류 (key #{used_key + 1}): {exc}"
+            )
+
+            # 403 / 프로젝트 접근 거부
+            if (
+                "403" in error_text
+                or "PERMISSION_DENIED" in error_text
+            ):
+                await disable_key(
+                    used_key,
+                    "403 PERMISSION_DENIED"
+                )
+
+                # 이 키는 버리고 다음 키로 재시도
+                continue
+
+            # 그 외 오류는 기존처럼 호출한 곳으로 전달
+            raise
+
+    raise RuntimeError(
+        "사용 가능한 Gemini API 키가 모두 실패했습니다."
+    )
 
 
 # ============================================================
