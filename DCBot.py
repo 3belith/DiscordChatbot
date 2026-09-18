@@ -41,8 +41,8 @@ if not DISCORD_TOKEN:
 if not GEMINI_API_KEYS:
     raise RuntimeError("GEMINI_API_KEY 또는 GEMINI_API_KEYS가 .env에 없습니다.")
 
-# 현재도 사용 가능한 2.5 Flash-Lite.
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
 COOLDOWN = float(os.getenv("COOLDOWN", "2"))
 SPAM_STRIKES = int(os.getenv("SPAM_STRIKES", "3"))
