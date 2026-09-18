@@ -1,0 +1,22 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python generated files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local tooling
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
