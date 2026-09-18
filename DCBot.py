@@ -91,19 +91,47 @@ clients = [
 key_index = 0
 key_index_lock = asyncio.Lock()
 
+# 문제가 발생한 키
+dead_keys = set()
+
 
 async def get_next_client():
-    """요청마다 등록된 키를 순환 선택."""
+    """사용 가능한 API 키를 순환 선택."""
+
     global key_index
 
     async with key_index_lock:
-        client = clients[key_index]
-        used_index = key_index
-        key_index = (key_index + 1) % len(clients)
 
-    return client, used_index
+        if len(dead_keys) >= len(clients):
+            raise RuntimeError("사용 가능한 Gemini API 키가 없습니다.")
+
+        # 최대 한 바퀴 돌면서 사용 가능한 키 탐색
+        for _ in range(len(clients)):
+            index = key_index
+            key_index = (key_index + 1) % len(clients)
+
+            if index not in dead_keys:
+                return clients[index], index
+
+        raise RuntimeError("사용 가능한 Gemini API 키가 없습니다.")
 
 
+async def disable_key(key_index: int, reason: str = ""):
+    """문제가 발생한 API 키를 이후 요청에서 제외."""
+
+    async with key_index_lock:
+        if key_index not in dead_keys:
+            dead_keys.add(key_index)
+
+            print(
+                f"Gemini 키 #{key_index + 1} 제외"
+                + (f" ({reason})" if reason else "")
+            )
+
+            print(
+                f"사용 가능 키: "
+                f"{len(clients) - len(dead_keys)}/{len(clients)}"
+            )
 # ============================================================
 # Discord
 # ============================================================
