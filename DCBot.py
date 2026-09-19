@@ -356,21 +356,9 @@ def censor_text(text: str, matches=None):
 
 
 def format_mod(rule):
-    """
-    범용 검열 출력 포맷.
-
-    ( MOD )
-    ( 검열된 단어 )
-    ( 검열 멘트 )
-    """
-    return (
-        "( MOD )\n"
-        f"( {rule['word']} )\n"
-        f"( {rule['message']} )"
-    )
-
-def get_mod_message(rule):
     return rule["message"]
+
+
     
 def parse_mod_response(text: str):
     """
@@ -716,7 +704,6 @@ async def on_message(message: discord.Message):
     matches = find_moderation_matches(content)
     
     if matches:
-        # 원본 메시지 삭제
         try:
             await message.delete()
         except discord.Forbidden:
@@ -726,29 +713,16 @@ async def on_message(message: discord.Message):
         except discord.HTTPException as exc:
             print(f"메시지 삭제 실패: {exc}")
     
-        # 사용자 타임아웃
-        try:
-            timeout_duration = discord.utils.utcnow() + timedelta(seconds=30)
-    
-            await message.author.timeout(
-                timeout_duration,
-                reason="검열 규칙 위반",
-            )
-    
-        except discord.Forbidden:
-            print("타임아웃 권한 없음")
-        except discord.HTTPException as exc:
-            print(f"타임아웃 실패: {exc}")
-    
-        # MOD 안내
         message_text = "\n\n".join(
-        get_mod_message(rule)
-        for rule in matches
+            format_mod(rule)
+            for rule in matches
         )
-
-        await message.reply(
-            message_text,
-            allowed_mentions=discord.AllowedMentions.none(),
+    
+        await message.channel.send(
+            f"{message.author.mention} {message_text}",
+            allowed_mentions=discord.AllowedMentions(
+                users=True
+            ),
         )
     
         return
