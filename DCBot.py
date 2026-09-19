@@ -369,7 +369,9 @@ def format_mod(rule):
         f"( {rule['message']} )"
     )
 
-
+def get_mod_message(rule):
+    return rule["message"]
+    
 def parse_mod_response(text: str):
     """
     AI가 다음 형태로 반환했는지 검사:
@@ -739,16 +741,14 @@ async def on_message(message: discord.Message):
             print(f"타임아웃 실패: {exc}")
     
         # MOD 안내
-        blocks = "\n\n".join(
-            format_mod(rule)
-            for rule in matches
+        message_text = "\n\n".join(
+        get_mod_message(rule)
+        for rule in matches
         )
-    
-        await message.channel.send(
-            f"{message.author.mention}\n{blocks}",
-            allowed_mentions=discord.AllowedMentions(
-                users=True
-            ),
+
+        await message.reply(
+            message_text,
+            allowed_mentions=discord.AllowedMentions.none(),
         )
     
         return
