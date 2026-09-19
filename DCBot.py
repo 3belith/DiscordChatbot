@@ -704,17 +704,30 @@ async def on_message(message: discord.Message):
     matches = find_moderation_matches(content)
     
     if matches:
+        # 원본 메시지 삭제
         try:
             await message.delete()
         except discord.Forbidden:
-            print("메시지 삭제 권한 없음")
+            print("❌ 메시지 삭제 권한 없음")
         except discord.NotFound:
             pass
         except discord.HTTPException as exc:
-            print(f"메시지 삭제 실패: {exc}")
+            print(f"❌ 메시지 삭제 실패: {exc}")
     
+        # 타임아웃 30초
+        try:
+            await message.author.timeout(
+                discord.utils.utcnow() + timedelta(seconds=30),
+                reason="검열 규칙 위반",
+            )
+        except discord.Forbidden:
+            print("❌ 타임아웃 권한 없음")
+        except discord.HTTPException as exc:
+            print(f"❌ 타임아웃 실패: {exc}")
+    
+        # 검열 멘트만 출력
         message_text = "\n\n".join(
-            format_mod(rule)
+            rule["message"]
             for rule in matches
         )
     
