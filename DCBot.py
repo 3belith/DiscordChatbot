@@ -15,7 +15,14 @@ import discord
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+import logging
 
+logger = logging.getLogger("DiscordBot")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 # ============================================================
 # 기본 설정
