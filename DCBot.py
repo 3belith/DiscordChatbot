@@ -10,7 +10,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-
+from datetime import timedelta
 
 # ============================================================
 # 설정
@@ -707,25 +707,50 @@ async def on_message(message: discord.Message):
         return
 
     last_request[user_id] = now
-
     # ========================================================
     # ★ 사전 검열
     # ========================================================
-
+    
     matches = find_moderation_matches(content)
-
+    
     if matches:
-        # 첫 매칭 규칙의 멘트를 사용하되,
-        # 여러 단어가 걸리면 MOD 블록을 모두 표시
+        # 원본 메시지 삭제
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("메시지 삭제 권한 없음")
+        except discord.NotFound:
+            pass
+        except discord.HTTPException as exc:
+            print(f"메시지 삭제 실패: {exc}")
+    
+        # 사용자 타임아웃
+        try:
+            timeout_duration = discord.utils.utcnow() + timedelta(seconds=30)
+    
+            await message.author.timeout(
+                timeout_duration,
+                reason="검열 규칙 위반",
+            )
+    
+        except discord.Forbidden:
+            print("타임아웃 권한 없음")
+        except discord.HTTPException as exc:
+            print(f"타임아웃 실패: {exc}")
+    
+        # MOD 안내
         blocks = "\n\n".join(
             format_mod(rule)
             for rule in matches
         )
-
-        await message.reply(
-            blocks,
-            allowed_mentions=discord.AllowedMentions.none(),
+    
+        await message.channel.send(
+            f"{message.author.mention}\n{blocks}",
+            allowed_mentions=discord.AllowedMentions(
+                users=True
+            ),
         )
+    
         return
 
     # ========================================================
